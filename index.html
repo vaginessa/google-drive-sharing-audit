@@ -2,7 +2,7 @@
 <html>
 <head>
   <base target="_top"/>
-  <title>Google Drive Permissions Audit</title>
+  <title>Google Drive Sharing Audit</title>
   <link href="https://fonts.googleapis.com/css?family=Oxygen+Mono" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css" rel="stylesheet"/>
   <style type="text/css">
@@ -132,17 +132,20 @@
     }
     
     function updateDuration () {
-      var milliseconds = arguments.length >= 1 ? arguments[0] : duration + (new Date()).getTime() - timeStart
+      var milliseconds = duration + (new Date()).getTime() - timeStart
+      if (arguments.length >= 1) {
+        milliseconds = arguments[0]
+      }
       var seconds = Math.floor(milliseconds / 1000) % 60
       var minutes = Math.floor((milliseconds / (60 * 1000)) % 60)
       var hours = Math.floor(milliseconds / (60 * 60 * 1000))
       var output = ''
       if (hours > 0)
-        output += hours.toString() + ' hours '
-      if (minutes > 0)
-        output += minutes.toString() + ' minutes '
-      if (seconds > 0)
-        output += seconds.toString() + ' seconds'
+        output += hours.toString() + (hours === 1 ? ' hour ' : ' hours ')
+      if (minutes > 0 || hours > 0)
+        output += minutes.toString() + (minutes === 1 ? ' minute ' : ' minutes ')
+      if (seconds > 0 || minutes > 0 || hours > 0)
+        output += seconds.toString() + (seconds === 1 ?  ' second ' : ' seconds')
       return text('#duration', output)
     }
     
@@ -174,16 +177,17 @@
           pauseStage('#file-status')
         } else {
           text('#file-status', 'in progress')
+          updateDuration()
           google.script.run.withSuccessHandler(processFiles).withFailureHandler(failure).processFiles(spreadsheet.id)
         }
       } else {  // Continue listing folders
         if (paused) {
           pauseStage('#folder-status')
         } else {
+          updateDuration()
           google.script.run.withSuccessHandler(processFolders).withFailureHandler(failure).processFolders(spreadsheet.id)
         }
       }
-      updateDuration()
     }
     
     // List files
@@ -202,20 +206,20 @@
         if (paused) {
           pauseStage('#file-status')
         } else {
+          updateDuration()
           google.script.run.withSuccessHandler(processFiles).withFailureHandler(failure).processFiles(spreadsheet.id)
         }
       }
-      updateDuration()
     }
   </script>
 </head>
 <body>
   <div class="main">
-    <h1>Google Drive Permissions Audit</h1>
-    <span class="subtitle">Scans folders and files in a user's Google Drive for permissions and stores the information in a spreadsheet.</span>
-    <br>
+    <h1>Google Drive Sharing Audit</h1>
+    <span class="subtitle">Scans folders and files in a user's Google Drive for sharing settings and stores the information in a spreadsheet.</span>
+    <br><br>
     <span>Note: Count of processed folders/files will update every 5 minutes.</span>
-    <br>
+    <br><br>
     <span>Time Elapsed:&nbsp;<span id="duration">none</span></span>
     <ol>
       <li>Setup:&nbsp;<span id="spreadsheet-status" class="status">queued</span></li>

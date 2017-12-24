@@ -1,6 +1,3 @@
-# Google Drive Permissions Audit
+# Google Drive Sharing Audit
 
-## To-Do
-
-  - **FEATURE:** Parallel processing
-  - Fix date formatting
+Scans folders and files in a user's Google Drive for sharing settings and stores the information in a spreadsheet.

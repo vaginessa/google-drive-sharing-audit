@@ -5,7 +5,7 @@
 // Creates a new Spreadsheet template and returns information to access it
 function createSpreadsheet () {
   // Create Spreadsheet
-  var spreadsheetName = 'Google Drive Permissions Audit: ' + dateString_(new Date())
+  var spreadsheetName = 'Google Drive Sharing Audit: ' + dateString_(new Date())
   var spreadsheet = SpreadsheetApp.create(spreadsheetName)
   // Add header row
   var header = ['ID', 'Type', 'URL', 'Name', 'Description', 'Starred',
