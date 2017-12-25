@@ -73,6 +73,8 @@ function togglePause () {
       element.setAttribute('disabled', 'disabled')
       element.value = 'Pausing...'
     })
+    google.script.run.withFailureHandler(failure).setPause(spreadsheet.id + '__folder', true)
+    google.script.run.withFailureHandler(failure).setPause(spreadsheet.id + '__file', true)
   } else {
     timeStart = (new Date()).getTime()
     durationInterval = setInterval(updateDuration, 500)

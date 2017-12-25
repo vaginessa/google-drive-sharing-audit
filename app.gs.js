@@ -8,21 +8,35 @@ function getTotals () {
   var folders = DriveApp.getFolders()
   var folder_total = 0
   while (folders.hasNext()) {
-    folders.next()
     folder_total++
+    folders.next()
   }
   // Count number of files in user's Drive
   var files = DriveApp.getFiles()
   var file_total = 0
   while (files.hasNext()) {
-    files.next()
     file_total++
+    files.next()
   }
   // Return total count of folders/files
   return {
     folder_total: folder_total,
     file_total: file_total
   }
+}
+
+// setPause  String, String, Bool -> NONE
+// Allows client to update pausing status for current operation
+function setPause (pause_id, pauseStatus) {
+  var props = PropertiesService.getUserProperties()
+  props.setProperty(pause_id, pauseStatus.toString())
+}
+
+// clearPause  String, String -> NONE
+// Clears pausing status for current operation
+function clearPause (pause_id) {
+  var props = PropertiesService.getUserProperties()
+  props.deleteProperty(pause_id)
 }
 
 // createSpreadsheet  NONE -> Dict[String]
@@ -56,10 +70,14 @@ function processFolders (spreadsheet_id) {
   // Open Spreadsheet
   var spreadsheet = SpreadsheetApp.openById(spreadsheet_id)
   var sheetFolders = spreadsheet.getSheetByName('Folders')
-  // Call hidden function
-  return processItems_(sheetFolders, DriveApp.getFolders(), function (folder) {
+  // Determine type of item for Spreadsheet
+  var mime_type = function (folder) {
     return 'folder'
-  })
+  }
+  // Create ID for pausing
+  pause_id = spreadsheet_id + '__folder'
+  // Call hidden function
+  return processItems_(sheetFolders, DriveApp.getFolders(), mime_type, pause_id)
 }
 
 // processFiles  String -> Dict[Boolean, Integer]
@@ -68,8 +86,12 @@ function processFiles (spreadsheet_id) {
   // Open Spreadsheet
   var spreadsheet = SpreadsheetApp.openById(spreadsheet_id)
   var sheetFiles = spreadsheet.getSheetByName('Files')
-  // Call hidden function
-  return processItems_(sheetFiles, DriveApp.getFiles(), function (file) {
+  // Determine the type of item for Spreadsheet
+  var mime_type = function (file) {
     return file.getMimeType()
-  })
+  }
+  // Create ID for pausing
+  pause_id = spreadsheet_id + '__file'
+  // Call hidden function
+  return processItems_(sheetFiles, DriveApp.getFiles(), mime_type, pause_id)
 }

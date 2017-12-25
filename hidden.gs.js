@@ -49,9 +49,9 @@ function getSheetItems_ (sheet) {
   return items
 }
 
-// processItems_  Google@Sheet, Google@Iterator -> Dict[Boolean, Integer]
+// processItems_  Google@Sheet, Google@Iterator, Function, String -> Dict[Boolean, Integer]
 // Adds information for items into each row of the Spreadsheet
-function processItems_ (sheet, item_iterator, item_type) {
+function processItems_ (sheet, item_iterator, mime_type, pause_id) {
   // Prepare termination conditions
   var startTime = (new Date()).getTime()
   var endTime = startTime + (5 * 60 * 1000)  // 5 mins
@@ -59,8 +59,13 @@ function processItems_ (sheet, item_iterator, item_type) {
   var sheet_items = getSheetItems_(sheet)
   // Initialize count of processed items
   var delta = 0
+  // Prepare for client-side pausing
+  var props = PropertiesService.getUserProperties()
+  props.setProperty(pause_id, 'false')
+  var iters = 0
+  var paused = false
   // Process items until complete or running too long
-  while (item_iterator.hasNext() && (new Date()).getTime() < endTime) {
+  while (item_iterator.hasNext() && (new Date()).getTime() < endTime && !paused) {
     // Get next item to process and ID to compare
     var item = item_iterator.next()
     var item_id = item.getId()
@@ -71,7 +76,7 @@ function processItems_ (sheet, item_iterator, item_type) {
       // Process item and add retrieved data to row
       var new_data = [
         item_id,
-        item_type(item),
+        mime_type(item),
         item.getUrl(),
         item.getName(),
         item.getDescription(),
@@ -90,7 +95,14 @@ function processItems_ (sheet, item_iterator, item_type) {
       // Increment count of processed items
       delta++
     }
+    // Check if client paused
+    iters = (iters + 1) % 10
+    if (iters === 0) {
+      paused = paused || (props.getProperty(pause_id) === 'true')
+    }
   }
+  // Clear paused property
+  clearPause(pause_id)
   // Return whether done processing items and number of changed items
   return {
     done: !item_iterator.hasNext(),
