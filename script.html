@@ -133,7 +133,7 @@ function updateDuration () {
 // Create new spreadsheet
 function createSpreadsheet (output) {
   spreadsheet = output
-  text('#output', spreadsheet.id)
+  text('#output', spreadsheet.url)
   each('#output', function (element) {
     element.href = spreadsheet.url
   })

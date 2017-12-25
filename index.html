@@ -22,19 +22,21 @@
 <body>
   <div class="main">
     <h1>Google Drive Sharing Audit</h1>
-    <span class="subtitle">Scans folders and files in a user's Google Drive for sharing settings and stores the information in a spreadsheet.</span>
-    <br><br>
-    <span>Note: Count of processed folders/files will update every 5 minutes.</span>
-    <br><br>
-    <span>Time Elapsed:&nbsp;<span id="duration">none</span></span>
+    <div>Scans folders and files in a user's Google Drive for sharing settings and stores the information in a spreadsheet.</div>
+    <br>
+    <div>Note: Count of processed folders/files will update every 5 minutes.</div>
+    <br>
+    <div>Time Elapsed: <span id="duration">none</span></div>
     <ol>
-      <li>Setup:&nbsp;<span id="spreadsheet-status" class="status">queued</span></li>
-      <li>Folders:&nbsp;<span id="folder-count"></span>&nbsp;<span id="folder-status" class="status">queued</span></li>
-      <li>Files:&nbsp;<span id="file-count"></span>&nbsp;<span id="file-status" class="status">queued</span></li>
-      <li>Results in spreadsheet:&nbsp;<a id="output" href="#" target="_blank"></a></li>
+      <li>Setup: <span id="spreadsheet-status" class="status">queued</span></li>
+      <li>Folders (<span id="folder-count">0</span>/<span id="folder-total">-</span>): <span id="folder-status" class="status">queued</span></li>
+      <li>Files (<span id="file-count">0</span>/<span id="file-total">-</span>): <span id="file-status" class="status">queued</span></li>
+      <li>Results in spreadsheet: <a id="output" href="#" target="_blank"></a></li>
     </ol>
     <input id="pause" type="button" value="Start" onclick="togglePause()" />
+    <br><br>
     <div id="error" class="error"></div>
+    <div>View <a href="https://github.com/a-gu/google-drive-sharing-audit">source on GitHub</a> or host your own</div>
   </div>
 </body>
 </html>
