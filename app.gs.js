@@ -1,6 +1,30 @@
 // Application
 // Main functions directly acessible by client
 
+// getTotals  NONE -> Dict[Integer]
+// Get total count of folders and files
+function getTotals () {
+  // Count number of folders in user's Drive
+  var folders = DriveApp.getFolders()
+  var folder_total = 0
+  while (folders.hasNext()) {
+    folders.next()
+    folder_total++
+  }
+  // Count number of files in user's Drive
+  var files = DriveApp.getFiles()
+  var file_total = 0
+  while (files.hasNext()) {
+    files.next()
+    file_total++
+  }
+  // Return total count of folders/files
+  return {
+    folder_total: folder_total,
+    file_total: file_total
+  }
+}
+
 // createSpreadsheet  NONE -> Dict[String]
 // Creates a new Spreadsheet template and returns information to access it
 function createSpreadsheet () {
