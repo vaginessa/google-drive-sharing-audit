@@ -1,13 +1,26 @@
 <script type="text/javascript">
 // Initialize global variables
 var spreadsheet = {}
-var paused = true
 var stage = 0
-var folders = 0
-var files = 0
+var folder = {
+  index: 0,
+  total: 0,
+  token: false,
+  paused: true,
+  done: false
+}
+var file = {
+  index: 0,
+  total: 0,
+  token: false,
+  paused: true,
+  done: false
+}
+var pauseSignal = true
 var duration = 0
 var timeStart = 0
 var durationInterval
+var token = false
 
 // DOM manipulation library instead of using jQuery
 function find (input) {
@@ -51,65 +64,110 @@ function failure (event) {
     element.setAttribute('disabled', 'disabled')
     element.value('Failed')
   })
+  stageStatus('error')
+  console.error(event)
+}
+
+//
+function stageStatus (status) {
+  var status = arguments[0]
+  var this_stage = arguments.length >= 2 ? arguments[1] : stage
+  var stage_selector = '#' + ['', 'setup', 'setup', 'folder-status, #file'][this_stage] + '-status'
+  text(stage_selector, status)
+}
+
+function stageStart () {
   switch (stage) {
     case 0:
-      text('#setup-status', 'error')
-      break
+      stage++
     case 1:
-      text('#folder-status', 'error')
+      if (arguments.length === 0) {
+        setupSpreadsheet()
+      } else {
+        setupSpreadsheet(arguments[0])
+      }
       break
     case 2:
-      text('#file-status', 'error')
+      if (arguments.length === 0) {
+        setupTotals()
+      } else {
+        setupTotals(arguments[0])
+      }
+      break
+    case 3:
+      if (arguments.length === 0) {
+        processItems()
+      } else {
+        processItems(arguments[0])
+      }
+      break
+    default:
+      console.error('Unknown stage: ' + stage.toString())
       break
   }
-  console.error(event)
+  stageStatus('in progress', stage)
 }
 
 // Pausing
 function togglePause () {
-  paused = !paused
-  if (paused) {
+  pauseSignal = !pauseSignal
+  if (pauseSignal) {  // Begin pausing
     each('#pause', function (element) {
       element.setAttribute('disabled', 'disabled')
       element.value = 'Pausing...'
     })
-    google.script.run.withFailureHandler(failure).setPause(spreadsheet.id + '__folder', true)
-    google.script.run.withFailureHandler(failure).setPause(spreadsheet.id + '__file', true)
-  } else {
+    // Send pause to folder script
+    google.script.run.withFailureHandler(failure).pauseThread(spreadsheet.id + '__folder')
+    // Send pause to file script
+    google.script.run.withFailureHandler(failure).pauseThread(spreadsheet.id + '__file')
+  } else {  // Resume stage
+    folder.paused = false
+    file.paused = false
     timeStart = (new Date()).getTime()
     durationInterval = setInterval(updateDuration, 500)
     each('#pause', function (element) {
       element.value = 'Pause'
     })
-    switch (stage) {
-      case 0:
-        text('#setup-status', 'in progress')
-        google.script.run.withSuccessHandler(createSpreadsheet).withFailureHandler(failure).createSpreadsheet()
-        break
-      case 1:
-        text('#setup-status', 'in progress')
-        google.script.run.withSuccessHandler(getTotals).withFailureHandler(failure).getTotals()
-        break
-      case 2:
-        text('#folder-status', 'in progress')
-        google.script.run.withSuccessHandler(processFolders).withFailureHandler(failure).processFolders(spreadsheet.id)
-        break
-      case 3:
-        text('#file-status', 'in progress')
-        google.script.run.withSuccessHandler(processFiles).withFailureHandler(failure).processFiles(spreadsheet.id)
-        break
-    }
+    stageStart()
   }
   return false
 }
 
-function pauseStage (selector) {
-  pauseDuration()
-  text(selector, 'paused')
-  each('#pause', function (element) {
-    element.value = 'Resume'
-    element.removeAttribute('disabled')
-  })
+function pauseStage (type) {
+  if (stage == 1) {
+    pauseSignal = true
+    folder.paused = true
+    file.paused = true
+  }
+  switch (type) {
+    case 'folder':
+      folder.paused = true
+      break
+    case 'file':
+      file.paused = true
+      break
+  }
+  var paused = folder.paused && file.paused
+  switch (stage) {
+    case 1:
+      stageStatus('paused')
+      break
+    case 2:
+      if (paused) {
+        stageStatus('paused')
+      }
+      break
+    case 3:
+      text('#' + type + '-status', 'paused')
+      break
+  }
+  if (paused) {
+    pauseDuration()
+    each('#pause', function (element) {
+      element.value = 'Resume'
+      element.removeAttribute('disabled')
+    })
+  }
 }
 
 function pauseDuration () {
@@ -137,75 +195,181 @@ function updateDuration () {
 }
 
 // Create new spreadsheet
-function createSpreadsheet (output) {
-  spreadsheet = output
-  text('#output', spreadsheet.url)
-  each('#output', function (element) {
-    element.href = spreadsheet.url
-  })
-  stage = 1
-  if (paused) {
-    pauseStage('#setup-status')
-  } else {
-    google.script.run.withSuccessHandler(getTotals).withFailureHandler(failure).getTotals()
-  }
-}
-
-function getTotals (args) {
-  text('#folder-total', args.folder_total.toString())
-  text('#file-total', args.file_total.toString())
-  stage = 2
-  text('#setup-status', 'complete')
-  if (paused) {
-    pauseStage('#folder-status')
-  } else {
-    text('#folder-status', 'in progress')
-    google.script.run.withSuccessHandler(processFolders).withFailureHandler(failure).processFolders(spreadsheet.id)
-  }
-}
-
-// List folders
-function processFolders (args) {
-  folders += args.delta
-  text('#folder-count', (folders + 1).toString())
-  if (args.done === true) {  // Finished listing folders
-    stage = 3
-    text('#folder-status', 'complete')
-    if (paused) {
-      pauseStage('#file-status')
-    } else {
-      text('#file-status', 'in progress')
-      updateDuration()
-      google.script.run.withSuccessHandler(processFiles).withFailureHandler(failure).processFiles(spreadsheet.id)
-    }
-  } else {  // Continue listing folders
-    if (paused) {
-      pauseStage('#folder-status')
-    } else {
-      updateDuration()
-      google.script.run.withSuccessHandler(processFolders).withFailureHandler(failure).processFolders(spreadsheet.id)
-    }
-  }
-}
-
-// List files
-function processFiles (args) {
-  files += args.delta
-  text('#file-count', (files + 1).toString())
-  if (args.done === true) {  // Finished listing files
-    stage = 4
-    pauseDuration()
-    text('#file-status', 'complete')
-    each('#pause', function (element) {
-      element.setAttribute('disabled', 'disabled')
-      element.value = 'Complete'
+function setupSpreadsheet () {
+  if (arguments.length === 0) {  // Start stage
+    stageStatus('in progress')
+    // Start stage
+    google.script.run
+      .withSuccessHandler(setupSpreadsheet)
+      .withFailureHandler(failure)
+      .setupSpreadsheet()
+  } else {  // Handle returned values
+    // Handle returned values
+    spreadsheet = arguments[0]
+    text('#output', spreadsheet.url)
+    each('#output', function (element) {
+      element.href = spreadsheet.url
     })
-  } else {  // Continue listing files
-    if (paused) {
-      pauseStage('#file-status')
+    // Prepare for next stage if done
+    if (arguments[0].done) {
+      stageStatus('complete')
+      folder.done = false
+      file.done = false
+      stage++
+    }
+    // Pause or continue
+    if (pauseSignal) {
+      pauseStage()
     } else {
-      updateDuration()
-      google.script.run.withSuccessHandler(processFiles).withFailureHandler(failure).processFiles(spreadsheet.id)
+      stageStart()
+    }
+  }
+}
+
+function setupTotals () {
+  if (arguments.length === 0) {  // Start stage
+    stageStatus('in progress')
+    // Start counting folders
+    if (!folder.done) {
+      setupTotals('folder')
+    }
+    // Start counting files
+    if (!file.done) {
+      setupTotals('file')
+    }
+  } else if (typeof(arguments[0]) === 'string') {
+    switch (arguments[0]) {
+      case 'folder':
+        var folder_params = {
+          item_type: 'folder',
+          token: folder.token,
+          pause_id: spreadsheet.id + '__folder'
+        }
+        google.script.run
+          .withSuccessHandler(setupTotals)
+          .withFailureHandler(failure)
+          .setupTotals(folder_params)
+        break
+      case 'file':
+        var file_params = {
+          item_type: 'file',
+          token: file.token,
+          pause_id: spreadsheet.id + '__file'
+        }
+        google.script.run
+          .withSuccessHandler(setupTotals)
+          .withFailureHandler(failure)
+          .setupTotals(file_params)
+        break
+    }
+  } else {  // Handle returned values
+    // Handle returned values
+    switch (arguments[0].item_type) {
+      case 'folder':
+        folder.total += arguments[0].delta
+        folder.token = arguments[0].token
+        folder.done = arguments[0].done
+        text('#folder-total', folder.total)
+        break
+      case 'file':
+        file.total += arguments[0].delta
+        file.token = arguments[0].token
+        file.done = arguments[0].done
+        text('#file-total', file.total)
+        break
+    }
+    // Prepare for next stage if done
+    var done = folder.done && file.done
+    if (done) {
+      stageStatus('complete')
+      folder.token = false
+      file.token = false
+      folder.done = false
+      file.done = false
+      stage++
+    }
+    // Pause or continue
+    if (pauseSignal) {
+      pauseStage(arguments[0].item_type)
+    } else if (!arguments[0].done) {
+      stageStart(arguments[0].item_type)
+    } else if (done) {
+      stageStart()
+    }
+  }
+}
+
+function processItems () {
+  if (arguments.length === 0) {  // Start stage
+    stageStatus('in progress')
+    // Start processing folders
+    if (!folder.done) {
+      processItems('folder')
+    }
+    // Start processing files
+    if (!file.done) {
+      processItems('file')
+    }
+  } else if (typeof(arguments[0]) === 'string') {
+    switch (arguments[0]) {
+      case 'folder':
+        var folder_params = {
+          item_type: 'folder',
+          token: folder.token,
+          spreadsheet_id: spreadsheet.id,
+          pause_id: spreadsheet.id + '__folder'
+        }
+        google.script.run
+          .withSuccessHandler(processItems)
+          .withFailureHandler(failure)
+          .processItems(folder_params)
+        break
+      case 'file':
+        var file_params = {
+          item_type: 'file',
+          token: file.token,
+          spreadsheet_id: spreadsheet.id,
+          pause_id: spreadsheet.id + '__file'
+        }
+        google.script.run
+          .withSuccessHandler(processItems)
+          .withFailureHandler(failure)
+          .processItems(file_params)
+        break
+    }
+  } else {  // Handle returned values
+    // Handle returned values
+    switch (arguments[0].item_type) {
+      case 'folder':
+        folder.index += arguments[0].delta
+        folder.token = arguments[0].token
+        folder.done = arguments[0].done
+        text('#folder-index', folder.index)
+        break
+      case 'file':
+        file.index += arguments[0].delta
+        file.token = arguments[0].token
+        file.done = arguments[0].done
+        text('#file-index', file.index)
+        break
+    }
+    // Prepare for next stage if done
+    var done = folder.done && file.done
+    if (done) {
+      stageStatus('complete')
+      folder.token = false
+      file.token = false
+      folder.done = false
+      file.done = false
+      stage++
+    }
+    // Pause or continue
+    if (pauseSignal) {
+      pauseStage(arguments[0].item_type)
+    } else if (!arguments[0].done) {
+      stageStart(arguments[0].item_type)
+    } else if (done) {
+      stageStart()
     }
   }
 }

@@ -4,6 +4,7 @@
 // dateString_  Date -> String
 // Returns string representation for inputted date
 function dateString_ (date) {
+  var date = arguments.length >= 1 ? arguments[0] : new Date()
   return date.toLocaleString('en-US', {
     timeZone: 'UTC',
     hourCycle: 'h23',
@@ -17,6 +18,21 @@ function dateString_ (date) {
   })
 }
 
+function isPaused_ (pause_id) {
+  var props = PropertiesService.getUserProperties()
+  var paused = props.getProperty(pause_id)
+  if (typeof (paused) === 'string') {
+    return paused.trim() === 'true'
+  } else {
+    return false
+  }
+}
+
+function clearPaused_ (pause_id) {
+  var props = PropertiesService.getUserProperties()
+  props.deleteProperty(pause_id)
+}
+
 // userToString_  Google@User -> String
 // Returns string representation for inputted user
 function userToString_ (user) {
@@ -28,84 +44,4 @@ function userToString_ (user) {
 // Returns string representation for inputted array of users
 function usersToString_ (users) {
   return users.map(userToString_).join('\n')
-}
-
-// getSheetItems_  Google@Sheet -> Dict[Integer]
-// Gets the row number for each ID in a Spreadsheet
-function getSheetItems_ (sheet) {
-  // Open Spreadsheet
-  var range = sheet.getDataRange()
-  var data = range.getValues()
-  // Initialize output dictionary
-  var items = {}
-  // Add items from Spreadsheet to output dictionary
-  for (var row_num = 1; row_num < data.length; row_num++) {
-    var row = data[row_num]
-    var id = row[0].trim()
-    if (id.length > 0) {
-      items[id] = row_num
-    }
-  }
-  return items
-}
-
-// processItems_  Google@Sheet, Google@Iterator, Function, String -> Dict[Boolean, Integer]
-// Adds information for items into each row of the Spreadsheet
-function processItems_ (sheet, item_iterator, mime_type, pause_id) {
-  // Prepare termination conditions
-  var startTime = (new Date()).getTime()
-  var endTime = startTime + (5 * 60 * 1000)  // 5 mins
-  // Get item IDs from Sheet
-  var sheet_items = getSheetItems_(sheet)
-  // Initialize count of processed items
-  var delta = 0
-  // Prepare for client-side pausing
-  var props = PropertiesService.getUserProperties()
-  props.setProperty(pause_id, 'false')
-  var iters = 0
-  var paused = false
-  // Process items until complete or running too long
-  while (item_iterator.hasNext() && (new Date()).getTime() < endTime && !paused) {
-    // Get next item to process and ID to compare
-    var item = item_iterator.next()
-    var item_id = item.getId()
-    // Processes items if item has not been processed before, assumes
-    // Sheet isn't changed except by current function during run, and that
-    // "item_iterator" doesn't return two items with the same ID
-    if (!sheet_items.hasOwnProperty(item_id)) {
-      // Process item and add retrieved data to row
-      var new_data = [
-        item_id,
-        mime_type(item),
-        item.getUrl(),
-        item.getName(),
-        item.getDescription(),
-        item.isStarred().toString(),
-        item.isTrashed().toString(),
-        item.isShareableByEditors().toString(),
-        item.getDateCreated().toUTCString(),
-        item.getLastUpdated().toUTCString(),
-        item.getSize().toString(),
-        item.getSharingAccess().toString(),
-        item.getSharingPermission().toString(),
-        userToString_(item.getOwner()),
-        usersToString_(item.getViewers()),
-        usersToString_(item.getEditors())]
-      sheet.appendRow(new_data)
-      // Increment count of processed items
-      delta++
-    }
-    // Check if client paused
-    iters = (iters + 1) % 10
-    if (iters === 0) {
-      paused = paused || (props.getProperty(pause_id) === 'true')
-    }
-  }
-  // Clear paused property
-  clearPause(pause_id)
-  // Return whether done processing items and number of changed items
-  return {
-    done: !item_iterator.hasNext(),
-    delta: delta
-  }
 }

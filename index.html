@@ -24,13 +24,11 @@
     <h1>Google Drive Sharing Audit</h1>
     <div>Scans folders and files in a user's Google Drive for sharing settings and stores the information in a spreadsheet.</div>
     <br>
-    <div>Note: Count of processed folders/files will update every 5 minutes.</div>
-    <br>
     <div>Time Elapsed: <span id="duration">none</span></div>
     <ol>
       <li>Setup: <span id="setup-status" class="status">queued</span></li>
-      <li>Folders (<span id="folder-count">0</span>/<span id="folder-total">-</span>): <span id="folder-status" class="status">queued</span></li>
-      <li>Files (<span id="file-count">0</span>/<span id="file-total">-</span>): <span id="file-status" class="status">queued</span></li>
+      <li>Folders (<span id="folder-index">0</span>/<span id="folder-total">-</span>): <span id="folder-status" class="status">queued</span></li>
+      <li>Files (<span id="file-index">0</span>/<span id="file-total">-</span>): <span id="file-status" class="status">queued</span></li>
       <li>Results in spreadsheet: <a id="output" href="#" target="_blank"></a></li>
     </ol>
     <input id="pause" type="button" value="Start" onclick="togglePause()" />

@@ -1,49 +1,18 @@
 // Application
 // Main functions directly acessible by client
 
-// getTotals  NONE -> Dict[Integer]
-// Get total count of folders and files
-function getTotals () {
-  // Count number of folders in user's Drive
-  var folders = DriveApp.getFolders()
-  var folder_total = 0
-  while (folders.hasNext()) {
-    folder_total++
-    folders.next()
-  }
-  // Count number of files in user's Drive
-  var files = DriveApp.getFiles()
-  var file_total = 0
-  while (files.hasNext()) {
-    file_total++
-    files.next()
-  }
-  // Return total count of folders/files
-  return {
-    folder_total: folder_total,
-    file_total: file_total
-  }
-}
-
 // setPause  String, String, Bool -> NONE
 // Allows client to update pausing status for current operation
-function setPause (pause_id, pauseStatus) {
+function pauseThread (pause_id) {
   var props = PropertiesService.getUserProperties()
-  props.setProperty(pause_id, pauseStatus.toString())
+  props.setProperty(pause_id, true.toString())
 }
 
-// clearPause  String, String -> NONE
-// Clears pausing status for current operation
-function clearPause (pause_id) {
-  var props = PropertiesService.getUserProperties()
-  props.deleteProperty(pause_id)
-}
-
-// createSpreadsheet  NONE -> Dict[String]
+// setupSpreadsheet  NONE -> Dict[String]
 // Creates a new Spreadsheet template and returns information to access it
-function createSpreadsheet () {
+function setupSpreadsheet () {
   // Create Spreadsheet
-  var spreadsheetName = 'Google Drive Sharing Audit: ' + dateString_(new Date())
+  var spreadsheetName = 'Google Drive Sharing Audit: ' + dateString_()
   var spreadsheet = SpreadsheetApp.create(spreadsheetName)
   // Add header row
   var header = ['ID', 'Type', 'URL', 'Name', 'Description', 'Starred',
@@ -52,46 +21,132 @@ function createSpreadsheet () {
   spreadsheet.appendRow(header)
   spreadsheet.setFrozenRows(1)
   // Duplicate sheet
-  var sheetFolders = spreadsheet.getSheets()[0]
-  var sheetFiles = spreadsheet.insertSheet(1, {template: sheetFolders})
+  var sheetFolder = spreadsheet.getSheets()[0]
+  var sheetFile = spreadsheet.insertSheet(1, {template: sheetFolder})
   // Name sheets
-  sheetFolders.setName('Folders')
-  sheetFiles.setName('Files')
+  sheetFolder.setName('Folders')
+  sheetFile.setName('Files')
   // Return spreadsheet information
   return {
+    done: true,
     id: spreadsheet.getId(),
     url: spreadsheet.getUrl()
   }
 }
 
-// processFolders  String -> Dict[Boolean, Integer]
-// Adds information for folders into each row of the Spreadsheet
-function processFolders (spreadsheet_id) {
-  // Open Spreadsheet
-  var spreadsheet = SpreadsheetApp.openById(spreadsheet_id)
-  var sheetFolders = spreadsheet.getSheetByName('Folders')
-  // Determine type of item for Spreadsheet
-  var mime_type = function (folder) {
-    return 'folder'
+// setupTotals  NONE -> Dict[Integer]
+// Get total count of folders and files
+function setupTotals (params) {
+  // Initialize termination conditions
+  var startTime = (new Date()).getTime()
+  var endTime = startTime + (5 * 60 * 1000)
+  var paused = false
+  // Initialize counter
+  var delta = 0
+  // Get correct iterator
+  switch (params.item_type) {
+    case 'folder':
+      if (typeof (params.token) === 'string') {
+        var item_iterator = DriveApp.continueFolderIterator(params.token)
+      } else {
+        var item_iterator = DriveApp.getFolders()
+      }
+      break
+    case 'file':
+      if (typeof (params.token) === 'string') {
+        var item_iterator = DriveApp.continueFileIterator(params.token)
+      } else {
+        var item_iterator = DriveApp.getFiles()
+      }
+      break
   }
-  // Create ID for pausing
-  pause_id = spreadsheet_id + '__folder'
-  // Call hidden function
-  return processItems_(sheetFolders, DriveApp.getFolders(), mime_type, pause_id)
+  // Iterate through items
+  while (item_iterator.hasNext() && (new Date()).getTime() < endTime && !paused) {
+    delta++
+    item_iterator.next()
+    if (delta % 10 === 0) {
+      paused = paused || isPaused_(params.pause_id)
+    }
+  }
+  // Clean-up pausing property
+  clearPaused_(params.pause_id)
+  // Return number of items and continuation
+  var token = item_iterator.hasNext() ? item_iterator.getContinuationToken() : false
+  return {
+    done: !item_iterator.hasNext(),
+    token: token,
+    item_type: params.item_type,
+    delta: delta
+  }
 }
 
-// processFiles  String -> Dict[Boolean, Integer]
-// Adds information for files into each row of the Spreadsheet
-function processFiles (spreadsheet_id) {
-  // Open Spreadsheet
-  var spreadsheet = SpreadsheetApp.openById(spreadsheet_id)
-  var sheetFiles = spreadsheet.getSheetByName('Files')
-  // Determine the type of item for Spreadsheet
-  var mime_type = function (file) {
-    return file.getMimeType()
+function processItems (params) {
+  // Initialize termination conditions
+  var startTime = (new Date()).getTime()
+  var endTime = startTime + (5 * 60 * 1000)
+  var paused = false
+  // Initialize counter
+  var delta = 0
+  // Get correct iterator, mime_type
+  var spreadsheet = SpreadsheetApp.openById(params.spreadsheet_id)
+  switch (params.item_type) {
+    case 'folder':
+      var mime_type = function () {
+        return 'folder'
+      }
+      var item_spreadsheet = spreadsheet.getSheetByName('Folders')
+      if (typeof (params.token) === 'string') {
+        var item_iterator = DriveApp.continueFolderIterator(params.token)
+      } else {
+        var item_iterator = DriveApp.getFolders()
+      }
+      break
+    case 'file':
+      var mime_type = function (item) {
+        return item.getMimeType()
+      }
+      var item_spreadsheet = spreadsheet.getSheetByName('Files')
+      if (typeof (params.token) === 'string') {
+        var item_iterator = DriveApp.continueFileIterator(params.token)
+      } else {
+        var item_iterator = DriveApp.getFiles()
+      }
+      break
   }
-  // Create ID for pausing
-  pause_id = spreadsheet_id + '__file'
-  // Call hidden function
-  return processItems_(sheetFiles, DriveApp.getFiles(), mime_type, pause_id)
+  // Iterate through items
+  while (item_iterator.hasNext() && (new Date()).getTime() < endTime && !paused) {
+    delta++
+    var item = item_iterator.next()
+    var item_data = [
+      item.getId(),
+      mime_type(item),
+      item.getUrl(),
+      item.getName(),
+      item.getDescription(),
+      item.isStarred().toString(),
+      item.isTrashed().toString(),
+      item.isShareableByEditors().toString(),
+      item.getDateCreated().toUTCString(),
+      item.getLastUpdated().toUTCString(),
+      item.getSize().toString(),
+      item.getSharingAccess().toString(),
+      item.getSharingPermission().toString(),
+      userToString_(item.getOwner()),
+      usersToString_(item.getViewers()),
+      usersToString_(item.getEditors())]
+    item_spreadsheet.appendRow(item_data)
+    if (delta % 10 === 0) {
+      paused = paused || isPaused_(params.pause_id)
+    }
+  }
+  // Clean-up pausing property
+  clearPaused_(params.pause_id)
+  // Return number of items and continuation
+  var token = item_iterator.hasNext() ? item_iterator.getContinuationToken() : false
+  return {
+    done: !item_iterator.hasNext(),
+    token: token,
+    item_type: params.item_type,
+    delta: delta
+  }
 }
