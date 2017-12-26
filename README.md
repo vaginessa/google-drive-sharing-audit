@@ -12,15 +12,19 @@ Scans folders and files in a user's Google Drive for sharing settings and stores
 4. Customize any settings if you want to.
 5. Select "Deploy as web app..." from the "Publish" menu. Publish your project with the following settings:
     - If the hosting Google account will be the only user:
+    
         | Field | Value |
         | --- | --- |
         | Execute the app as | User accessing the web app |
         | Who has access to the app | Only myself |
+    
     - If another Google account will use the app:
+    
         | Field | Value |
         | --- | --- |
         | Execute the app as | User accessing the web app |
         | Who has access to the app | Anyone |
+    
 6. Remember the web app's URL, which you can visit to use the app
 
 ## Usage
