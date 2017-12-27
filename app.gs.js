@@ -16,7 +16,7 @@ function setupSpreadsheet () {
     'Trashed', 'Sharable by Editors', 'Created', 'Modified', 'Size',
     'Sharing Access', 'Sharing Permission', 'Owner', 'Viewers', 'Editors']
   // Create Spreadsheet
-  var spreadsheetName = 'Google Drive Sharing Audit: ' + dateString_()
+  var spreadsheetName = spreadsheetNameStart + dateString_()
   var spreadsheet = SpreadsheetApp.create(spreadsheetName, 2, header.length)
   // Add header row
   spreadsheet.appendRow(header)
@@ -25,8 +25,8 @@ function setupSpreadsheet () {
   var sheetFolder = spreadsheet.getSheets()[0]
   var sheetFile = spreadsheet.insertSheet(1, {template: sheetFolder})
   // Name sheets
-  sheetFolder.setName('Folders')
-  sheetFile.setName('Files')
+  sheetFolder.setName(sheetNameFolder)
+  sheetFile.setName(sheetNameFile)
   // Return spreadsheet information
   return {
     done: true,
@@ -40,7 +40,7 @@ function setupSpreadsheet () {
 function setupTotals (params) {
   // Initialize termination conditions
   var startTime = (new Date()).getTime()
-  var endTime = startTime + (0.5 * 60 * 1000)
+  var endTime = startTime + maxExecutionTime
   var paused = false
   // Initialize counter
   var delta = 0
@@ -65,7 +65,7 @@ function setupTotals (params) {
   while (item_iterator.hasNext() && (new Date()).getTime() < endTime && !paused) {
     delta++
     item_iterator.next()
-    if (delta % 10 === 0) {
+    if (delta % pauseCheckIterations === 0) {
       paused = paused || isPaused_(params.pause_id)
     }
   }
@@ -89,7 +89,7 @@ function setupTotals (params) {
 function processItems (params) {
   // Initialize termination conditions
   var startTime = (new Date()).getTime()
-  var endTime = startTime + (0.5 * 60 * 1000)
+  var endTime = startTime + maxExecutionTime
   var paused = false
   // Initialize counter
   var delta = 0
@@ -100,7 +100,7 @@ function processItems (params) {
       var mime_type = function () {
         return 'folder'
       }
-      var item_spreadsheet = spreadsheet.getSheetByName('Folders')
+      var item_spreadsheet = spreadsheet.getSheetByName(sheetNameFolder)
       if (typeof (params.token) === 'string') {
         var item_iterator = DriveApp.continueFolderIterator(params.token)
       } else {
@@ -111,7 +111,7 @@ function processItems (params) {
       var mime_type = function (item) {
         return item.getMimeType()
       }
-      var item_spreadsheet = spreadsheet.getSheetByName('Files')
+      var item_spreadsheet = spreadsheet.getSheetByName(sheetNameFile)
       if (typeof (params.token) === 'string') {
         var item_iterator = DriveApp.continueFileIterator(params.token)
       } else {
@@ -141,7 +141,7 @@ function processItems (params) {
       usersToString_(item.getViewers()),
       usersToString_(item.getEditors())]
     item_spreadsheet.appendRow(item_data)
-    if (delta % 10 === 0) {
+    if (delta % pauseCheckIterations === 0) {
       paused = paused || isPaused_(params.pause_id)
     }
   }
