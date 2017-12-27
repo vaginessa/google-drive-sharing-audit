@@ -8,8 +8,8 @@ Scans folders and files in a user's Google Drive for sharing settings and stores
 
 1. Log in with the Google account you want to use to host the app. Which account you choose doesn't matter much, as long as it can be used to host Google Apps Script web applications.
 2. Proceed to [Google Drive](https://drive.google.com/drive/), and create a new "Google Apps Script" from the file-creation menu.
-3. In the "Google Apps Script" online IDE, create new "Script" and "HTML" files with the same names and contents as the source files from this repository.
-4. Customize any settings if you want to.
+3. In the "Google Apps Script" online IDE, create new "Script" and "HTML" files with the same names and contents as the source files from this repository. For files with ending in `.gs.js`, replace the file extension with `.js`.
+4. Customize any settings if you want to in `options.gs`.
 5. Select "Deploy as web app..." from the "Publish" menu. Publish your project with the following settings:
     - If the hosting Google account will be the only user:
     
