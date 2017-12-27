@@ -51,8 +51,8 @@ function each(input, func) {
 
 function text (input, contents) {
   return each(input, function (element) {
-    element.innerText = contents
-    element.textContents = contents
+    element.innerText = contents.toString()
+    element.textContents = contents.toString()
   })
 }
 
@@ -78,34 +78,40 @@ function stageStatus (status) {
 
 function stageStart () {
   switch (stage) {
-    case 0:
+    case 0:  // Move to Stage 1
       stage++
-    case 1:
+    case 1:  // Setup Spreadsheet
       if (arguments.length === 0) {
         setupSpreadsheet()
       } else {
         setupSpreadsheet(arguments[0])
       }
       break
-    case 2:
+    case 2:  // Setup Totals
       if (arguments.length === 0) {
         setupTotals()
       } else {
         setupTotals(arguments[0])
       }
       break
-    case 3:
+    case 3:  // Process Items
       if (arguments.length === 0) {
         processItems()
       } else {
         processItems(arguments[0])
       }
       break
+    case 4:  // Finished
+      pauseDuration()
+      each('#pause', function (element) {
+        element.setAttribute('disabled', 'disabled')
+        element.value = 'Complete'
+      })
+      break
     default:
       console.error('Unknown stage: ' + stage.toString())
       break
   }
-  stageStatus('in progress', stage)
 }
 
 // Pausing
@@ -147,7 +153,7 @@ function pauseStage (type) {
       file.paused = true
       break
   }
-  var paused = folder.paused && file.paused
+  var paused = (folder.paused || folder.done) && (file.paused || file.done)
   switch (stage) {
     case 1:
       stageStatus('paused')
@@ -228,7 +234,6 @@ function setupSpreadsheet () {
 
 function setupTotals () {
   if (arguments.length === 0) {  // Start stage
-    stageStatus('in progress')
     // Start counting folders
     if (!folder.done) {
       setupTotals('folder')
@@ -240,6 +245,7 @@ function setupTotals () {
   } else if (typeof(arguments[0]) === 'string') {
     switch (arguments[0]) {
       case 'folder':
+        text('#setup-status', 'in progress')
         var folder_params = {
           item_type: 'folder',
           token: folder.token,
@@ -251,6 +257,7 @@ function setupTotals () {
           .setupTotals(folder_params)
         break
       case 'file':
+        text('#setup-status', 'in progress')
         var file_params = {
           item_type: 'file',
           token: file.token,
@@ -301,7 +308,6 @@ function setupTotals () {
 
 function processItems () {
   if (arguments.length === 0) {  // Start stage
-    stageStatus('in progress')
     // Start processing folders
     if (!folder.done) {
       processItems('folder')
@@ -313,6 +319,7 @@ function processItems () {
   } else if (typeof(arguments[0]) === 'string') {
     switch (arguments[0]) {
       case 'folder':
+        text('#folder-status', 'in progress')
         var folder_params = {
           item_type: 'folder',
           token: folder.token,
@@ -325,6 +332,7 @@ function processItems () {
           .processItems(folder_params)
         break
       case 'file':
+        text('#file-status', 'in progress')
         var file_params = {
           item_type: 'file',
           token: file.token,
@@ -354,6 +362,9 @@ function processItems () {
         break
     }
     // Prepare for next stage if done
+    if (arguments[0].done) {
+      text('#' + arguments[0].item_type + '-status', 'complete')
+    }
     var done = folder.done && file.done
     if (done) {
       stageStatus('complete')

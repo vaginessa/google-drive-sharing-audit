@@ -39,7 +39,7 @@ function setupSpreadsheet () {
 function setupTotals (params) {
   // Initialize termination conditions
   var startTime = (new Date()).getTime()
-  var endTime = startTime + (5 * 60 * 1000)
+  var endTime = startTime + (0.5 * 60 * 1000)
   var paused = false
   // Initialize counter
   var delta = 0
@@ -83,7 +83,7 @@ function setupTotals (params) {
 function processItems (params) {
   // Initialize termination conditions
   var startTime = (new Date()).getTime()
-  var endTime = startTime + (5 * 60 * 1000)
+  var endTime = startTime + (0.5 * 60 * 1000)
   var paused = false
   // Initialize counter
   var delta = 0
