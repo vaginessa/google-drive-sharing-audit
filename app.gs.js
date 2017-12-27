@@ -1,15 +1,15 @@
 // Application
 // Main functions directly acessible by client
 
-// setPause  String, String, Bool -> NONE
-// Allows client to update pausing status for current operation
+// setPause  String -> NONE
+// Allows client to update pausing status for spreadsheet id and item type
 function pauseThread (pause_id) {
   var props = PropertiesService.getUserProperties()
   props.setProperty(pause_id, true.toString())
 }
 
-// setupSpreadsheet  NONE -> Dict[String]
-// Creates a new Spreadsheet template and returns information to access it
+// setupSpreadsheet  NONE -> Dict[Bool, String]
+// Creates a new Spreadsheet template
 function setupSpreadsheet () {
   // Create Spreadsheet
   var spreadsheetName = 'Google Drive Sharing Audit: ' + dateString_()
@@ -34,7 +34,7 @@ function setupSpreadsheet () {
   }
 }
 
-// setupTotals  NONE -> Dict[Integer]
+// setupTotals  Dict[String] -> Dict[Bool, String, Integer]
 // Get total count of folders and files
 function setupTotals (params) {
   // Initialize termination conditions
@@ -71,7 +71,10 @@ function setupTotals (params) {
   // Clean-up pausing property
   clearPaused_(params.pause_id)
   // Return number of items and continuation
-  var token = item_iterator.hasNext() ? item_iterator.getContinuationToken() : false
+  var token = false
+  if (item_iterator.hasNext()) {
+    token = item_iterator.getContinuationToken()
+  }
   return {
     done: !item_iterator.hasNext(),
     token: token,
@@ -80,6 +83,8 @@ function setupTotals (params) {
   }
 }
 
+// processItems  Dict[String] -> Dict[Bool, String, Integer]
+// Add folder/file data to a Spreadsheet
 function processItems (params) {
   // Initialize termination conditions
   var startTime = (new Date()).getTime()

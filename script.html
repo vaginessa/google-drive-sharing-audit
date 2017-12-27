@@ -1,5 +1,6 @@
 <script type="text/javascript">
-// Initialize global variables
+////  Initialize global variables  ////
+
 var spreadsheet = {}
 var stage = 0
 var folder = {
@@ -20,9 +21,11 @@ var pauseSignal = true
 var duration = 0
 var timeStart = 0
 var durationInterval
-var token = false
 
-// DOM manipulation library instead of using jQuery
+////  DOM manipulation library instead of jQuery  ////
+
+// find  (String|Array[String, Element]|Element) -> Array[Element]
+// Returns an array of DOM elements
 function find (input) {
   var elements = []
   if (typeof(input) === 'string') {
@@ -40,6 +43,8 @@ function find (input) {
   return elements
 }
 
+// each  (String|Array[String, Element]|Element), Function -> Array[Element]
+// Maps a function onto DOM elements
 function each(input, func) {
   var inputs = find(input)
   var outputs = []
@@ -49,6 +54,8 @@ function each(input, func) {
   return outputs
 }
 
+// text  (String|Array[String, Element]|Element), String -> Array[Element]
+// Sets the text of DOM elements
 function text (input, contents) {
   return each(input, function (element) {
     element.innerText = contents.toString()
@@ -56,7 +63,10 @@ function text (input, contents) {
   })
 }
 
-// Error handler
+////  Helper functions  ////
+
+// failure  Error -> NONE
+// Error handling function
 function failure (event) {
   pauseDuration()
   text('#error', 'Error: ' + event.message)
@@ -68,7 +78,8 @@ function failure (event) {
   console.error(event)
 }
 
-//
+// stageStatus  String, Integer? -> NONE
+// Sets the status message for a stage
 function stageStatus (status) {
   var status = arguments[0]
   var this_stage = arguments.length >= 2 ? arguments[1] : stage
@@ -76,6 +87,8 @@ function stageStatus (status) {
   text(stage_selector, status)
 }
 
+// stageStart  Integer? -> NONE
+// Begins execution of the current stage
 function stageStart () {
   switch (stage) {
     case 0:  // Move to Stage 1
@@ -114,7 +127,10 @@ function stageStart () {
   }
 }
 
-// Pausing
+////  Pausing  ////
+
+// togglePause  NONE -> Bool
+// Pauses or resumes execution on clicking the button
 function togglePause () {
   pauseSignal = !pauseSignal
   if (pauseSignal) {  // Begin pausing
@@ -139,6 +155,8 @@ function togglePause () {
   return false
 }
 
+// pauseStage  String -> NONE
+// Handles pausing actions for a stage and item type
 function pauseStage (type) {
   if (stage == 1) {
     pauseSignal = true
@@ -176,12 +194,18 @@ function pauseStage (type) {
   }
 }
 
+////  Timing  ////
+
+// pauseDuration  NONE -> NONE
+// Pauses the timer
 function pauseDuration () {
   clearInterval(durationInterval)
   duration += (new Date()).getTime() - timeStart
   updateDuration(duration)
 }
 
+// updateDuration  Integer? -> Array[Element]
+// Updates the UI time elapsed
 function updateDuration () {
   var milliseconds = duration + (new Date()).getTime() - timeStart
   if (arguments.length >= 1) {
@@ -200,7 +224,10 @@ function updateDuration () {
   return text('#duration', output)
 }
 
-// Create new spreadsheet
+////  Main application functions  ////
+
+// setupSpreadsheet  Dict[String, Bool]? -> NONE
+// Creates a new Spreadsheet template
 function setupSpreadsheet () {
   if (arguments.length === 0) {  // Start stage
     stageStatus('in progress')
@@ -232,6 +259,8 @@ function setupSpreadsheet () {
   }
 }
 
+// setupTotals  (String|Dict[String, Integer])? -> NONE
+// Get total count of folders and files
 function setupTotals () {
   if (arguments.length === 0) {  // Start stage
     // Start counting folders
@@ -306,6 +335,8 @@ function setupTotals () {
   }
 }
 
+// processItems  (String|Dict[String, Integer])? -> NONE
+// Add folder/file data to a Spreadsheet
 function processItems () {
   if (arguments.length === 0) {  // Start stage
     // Start processing folders
