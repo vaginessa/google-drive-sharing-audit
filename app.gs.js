@@ -11,13 +11,14 @@ function pauseThread (pause_id) {
 // setupSpreadsheet  NONE -> Dict[Bool, String]
 // Creates a new Spreadsheet template
 function setupSpreadsheet () {
-  // Create Spreadsheet
-  var spreadsheetName = 'Google Drive Sharing Audit: ' + dateString_()
-  var spreadsheet = SpreadsheetApp.create(spreadsheetName)
-  // Add header row
+  // Prepare header row
   var header = ['ID', 'Type', 'URL', 'Name', 'Description', 'Starred',
     'Trashed', 'Sharable by Editors', 'Created', 'Modified', 'Size',
     'Sharing Access', 'Sharing Permission', 'Owner', 'Viewers', 'Editors']
+  // Create Spreadsheet
+  var spreadsheetName = 'Google Drive Sharing Audit: ' + dateString_()
+  var spreadsheet = SpreadsheetApp.create(spreadsheetName, 2, header.length)
+  // Add header row
   spreadsheet.appendRow(header)
   spreadsheet.setFrozenRows(1)
   // Duplicate sheet
